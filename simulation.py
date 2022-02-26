@@ -1,7 +1,4 @@
 from __future__ import print_function
-from asyncio import as_completed
-from mimetypes import init
-from operator import le
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -20,11 +17,13 @@ def main():
 
     with open("data.pkl","rb") as f:
         data = pickle.load(f)
+    print("Data Loaded")
 
     no, seq_len, dim = data.shape
     ori_time = [seq_len] * no
     max_seq_len = seq_len
     X = shuffle_data(data.copy(), seed=42)
+    print("Data Shuffled")
     z_dim = 12
 
     # Build network
@@ -44,7 +43,7 @@ def main():
     # Discrimator Network
     discriminator = []
     birnn_units = 300
-    discriminator.append(BiRNN(n_units=birnn_units, activation='tanh', bptt_trunc=12, input_shape=(max_seq_len,rnn_units)))
+    discriminator.append(BiRNN(n_units=birnn_units, activation='tanh', bptt_trunc=12, input_shape=(max_seq_len, rnn_units)))
     discriminator.append(Dense(n_units=1, input_shape=(max_seq_len, birnn_units)))
     discriminator.append(Activation('sigmoid'))
 
@@ -62,7 +61,7 @@ def main():
 
     model.initialize()
 
-    model.fit(X, z_dim, ori_time, max_seq_len, n_epochs=500, batch_size=32)
+    model.fit(X, z_dim, ori_time, max_seq_len, n_epochs=500, batch_size=512)
 
     for i in tqdm(range(100)):
         Z = np.array(random_generator(no, z_dim, ori_time, max_seq_len))

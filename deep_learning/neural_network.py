@@ -169,7 +169,6 @@ class TimeGAN():
         self.embedder.backward_pass(loss_grad)
 
         wandb.log({"Embedder Network Loss": loss})
-        #print("Embedder Network Loss " + str(loss))
 
         return loss
 
@@ -190,7 +189,6 @@ class TimeGAN():
         self.generator.backward_pass(loss_grad)
 
         wandb.log({"Supervised Loss": loss})
-        #print("Supervised Loss " + str(loss))
 
         return loss
 
@@ -275,8 +273,6 @@ class TimeGAN():
         self.embedder.backward_pass(loss_grad_)
         
         wandb.log({"Generator Loss": G_loss, "Embedder Loss": E_loss})
-        #print("Generator Loss " + str(G_loss))
-        #print("Embedder Loss " + str(E_loss))
 
         return G_loss, E_loss
 
@@ -317,7 +313,6 @@ class TimeGAN():
             loss_grad = discriminate.backward_pass(loss_grad)
         
         wandb.log({"Discriminator Loss": loss})
-        # print("Discriminator Loss: " + str(loss))
 
         return loss
 
