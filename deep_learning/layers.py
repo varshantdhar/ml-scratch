@@ -100,7 +100,7 @@ class Activation(Layer):
 
     def backward_pass(self, accum_grad):
         activation_grad = self.activation_func.gradient(self.layer_input)
-        return accum_grad * np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), 1e-4, 1.0)
+        return accum_grad * np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), -1.0, 1.0)
 
     def output_shape(self):
         return self.input_shape
@@ -178,7 +178,7 @@ class RNN(Layer):
         for t in reversed(range(timesteps)):
             grad_V += accum_grad[:, t].T.dot(self.states[:, t])
             activation_grad = self.activation.gradient(self.state_input[:, t])
-            activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), 1e-4, 1.0)
+            activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), -1.0, 1.0)
             grad_wrt_state = accum_grad[:, t].dot(self.V) * activation_grad
             accum_grad_next[:, t] = grad_wrt_state.dot(self.U)
 
@@ -187,7 +187,7 @@ class RNN(Layer):
                 grad_U += grad_wrt_state.T.dot(self.layer_input[:,t_])
                 grad_W += grad_wrt_state.T.dot(self.states[:, t_ - 1])
                 activation_grad = self.activation.gradient(self.state_input[:, t_ - 1])
-                activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), 1e-4, 1.0)
+                activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), -1.0, 1.0)
                 grad_wrt_state = grad_wrt_state.dot(self.W.T) * activation_grad
             
         self.U = self.U_opt.update(self.U, grad_U)
@@ -283,7 +283,7 @@ class BiRNN(Layer):
         for t in reversed(range(timesteps)):
             grad_V += accum_grad[:, t, :, 0].T.dot(self.states[:, t, :, 0])
             activation_grad = self.activation.gradient(self.state_input[:, t, :, 0])
-            activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), 1e-4, 1.0)
+            activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), -1.0, 1.0)
             grad_wrt_state = accum_grad[:, t, :, 0].dot(self.V) * activation_grad
             accum_grad_next[:, t, :, 0] = grad_wrt_state.dot(self.U)
 
@@ -292,13 +292,13 @@ class BiRNN(Layer):
                 grad_U += grad_wrt_state.T.dot(self.layer_input[:, t_])
                 grad_W += grad_wrt_state.T.dot(self.states[:, t_ - 1, :, 0])
                 activation_grad = self.activation.gradient(self.state_input[:, t_ - 1, :, 0])
-                activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), 1e-4, 1.0)
+                activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), -1.0, 1.0)
                 grad_wrt_state = grad_wrt_state.dot(self.W.T) * activation_grad
         
         for t in range(timesteps):
             grad_V_reverse += accum_grad[:, t, :, 1].T.dot(self.states[:, t, :, 1])
             activation_grad = self.activation.gradient(self.state_input[:, t, :, 1])
-            activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), 1e-4, 1.0)
+            activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), -1.0, 1.0)
             grad_wrt_state = accum_grad[:, t, :, 1].dot(self.V_reverse) * activation_grad
             accum_grad_next[:, t, :, 1] = grad_wrt_state.dot(self.U_reverse)
 
@@ -307,7 +307,7 @@ class BiRNN(Layer):
                 grad_U_reverse += grad_wrt_state.T.dot(self.layer_input[:, t_])
                 grad_W_reverse += grad_wrt_state.T.dot(self.states[:, t_ - 1, :, 1])
                 activation_grad = self.activation.gradient(self.state_input[:, t_ - 1, :, 1])
-                activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), 1e-4, 1.0)
+                activation_grad = np.clip(activation_grad / (np.linalg.norm(activation_grad) + 1e-5), -1.0, 1.0)
                 grad_wrt_state = grad_wrt_state.dot(self.W_reverse.T) * activation_grad
             
         self.U = self.U_opt.update(self.U, grad_U)

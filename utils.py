@@ -22,6 +22,13 @@ def shuffle_data(X, seed=None):
     np.random.shuffle(idx)
     return X[idx]
 
+def shuffle_both(X, y, seed=None):
+    if seed:
+        np.random.seed(seed)
+    idx = np.arange(X.shape[0])
+    np.random.shuffle(idx)
+    return X[idx], y[idx]
+
 def train_test_split(X, y, test_size=0.5, shuffle=True, seed=None):
     if shuffle:
         X, y = shuffle_data(X, y, seed)

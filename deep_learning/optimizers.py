@@ -27,7 +27,7 @@ class StochasticGradientAscent():
         return w + self.learning_rate * self.w_updt + self.w_updt * self.wd
 
 class Adam():
-    def __init__(self, learning_rate=0.001, b1 = 0.9, b2=0.999):
+    def __init__(self, learning_rate=1e-5, b1 = 0.9, b2=0.999):
         self.learning_rate = learning_rate
         self.b1 = b1
         self.b2 = b2

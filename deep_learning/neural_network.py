@@ -1,11 +1,10 @@
 from __future__ import print_function, division
 import numpy as np
-from utils import batch_iterator
 import wandb
 import pickle
 
 from tqdm import tqdm
-from utils import random_generator
+from utils import batch_iterator, random_generator
 from deep_learning.optimizers import Adam, StochasticGradientAscent
 from time import sleep
 
@@ -156,10 +155,10 @@ class TimeGAN():
          # Embedder Network Loss
         E_loss_T0 = self.reconstruction_loss.loss(X, X_tilde)
         E_loss_T0_grad = self.reconstruction_loss.gradient(X, X_tilde)
+        E_loss_T0_grad=np.clip(E_loss_T0_grad / (np.linalg.norm(E_loss_T0_grad) + 1e-5), -1.0, 1.0)
         E_loss0 = 10 * np.sqrt(E_loss_T0)
         E_loss0_grad = 5 / (np.sqrt(E_loss_T0_grad) + 1e-6)
-
-        E_loss0_grad=np.clip(E_loss0_grad / (np.linalg.norm(E_loss0_grad) + 1e-5), 1e-4, 1.0)
+        E_loss0_grad = np.clip(E_loss0_grad / (np.linalg.norm(E_loss0_grad) + 1e-5), -1.0, 1.0)
 
         loss = E_loss0
         loss_grad = E_loss0_grad
@@ -179,8 +178,7 @@ class TimeGAN():
         # 2. Supervised loss
         G_loss_S = self.supervised_loss.loss(H, H_hat_supervise)
         G_loss_S_grad = self.supervised_loss.gradient(H, H_hat_supervise)
-
-        G_loss_S_grad=np.clip(G_loss_S_grad / (np.linalg.norm(G_loss_S_grad) + 1e-5), 1e-4, 1.0)
+        G_loss_S_grad = np.clip(G_loss_S_grad / (np.linalg.norm(G_loss_S_grad) + 1e-5), -1.0, 1.0)
 
         loss = G_loss_S
         loss_grad = G_loss_S_grad
@@ -219,12 +217,15 @@ class TimeGAN():
         # 1. Adversarial loss
         G_loss_U = self.unsupervised_loss.loss(np.ones_like(Y_fake), Y_fake)
         G_loss_U_grad = self.unsupervised_loss.gradient(np.ones_like(Y_fake), Y_fake)
+        G_loss_U_grad = np.clip(G_loss_U_grad / (np.linalg.norm(G_loss_U_grad) + 1e-5), -1.0, 1.0)
         G_loss_U_e = self.unsupervised_loss.loss(np.ones_like(Y_fake_e), Y_fake_e)
         G_loss_U_e_grad = self.unsupervised_loss.gradient(np.ones_like(Y_fake_e), Y_fake_e)
+        G_loss_U_e_grad = np.clip(G_loss_U_e_grad / (np.linalg.norm(G_loss_U_e_grad) + 1e-5), -1.0, 1.0)
 
         # 2. Supervised loss
         G_loss_S = self.supervised_loss.loss(H, H_hat_supervise)
         G_loss_S_grad = self.supervised_loss.gradient(H, H_hat_supervise)
+        G_loss_S_grad = np.clip(G_loss_S_grad / (np.linalg.norm(G_loss_S_grad) + 1e-5), -1.0, 1.0)
 
         # 3. Two Momments
         G_loss_V1 = np.mean(np.abs(np.sqrt(np.var(X_hat, axis=0) + 1e-6) - np.sqrt(np.var(X, axis=0) + 1e-6)))
@@ -233,19 +234,22 @@ class TimeGAN():
 
         X_var = np.sqrt(np.var(X_hat, axis=0) + 1e-6) - np.sqrt(np.var(X, axis=0) + 1e-6)
         X_var_grad = (np.mean(X_hat - np.mean(X_hat, axis=0)))/np.sqrt(np.var(X_hat, axis=0) + 1e-6) - (np.mean(X - np.mean(X, axis=0)))/np.sqrt(np.var(X, axis=0) + 1e-6)
+        X_var_grad = np.clip(X_var_grad / (np.linalg.norm(X_var_grad) + 1e-5), -1.0, 1.0)
         G_loss_V1_grad = np.mean(X_var * X_var_grad / np.abs(X_var))
+        G_loss_V1_grad = np.clip(G_loss_V1_grad / (np.linalg.norm(G_loss_V1_grad) + 1e-5), -1.0, 1.0)
 
         X_mean = np.mean(X_hat, axis=0) - np.mean(X, axis=0)
         X_mean_grad = np.mean(np.ones_like(X_hat), axis=0) - np.mean(np.ones_like(X), axis=0)
         G_loss_V2_grad = np.mean(X_mean * X_mean_grad / np.abs(X_mean))
+        G_loss_V2_grad = np.clip(G_loss_V2_grad / (np.linalg.norm(G_loss_V2_grad) + 1e-5), -1.0, 1.0)
         
         G_loss_V_grad = G_loss_V1_grad + G_loss_V2_grad
+        G_loss_V_grad = np.clip(G_loss_V_grad / (np.linalg.norm(G_loss_V_grad) + 1e-5), -1.0, 1.0)
 
         # 4. Summation
         G_loss = G_loss_U + self.gamma * G_loss_U_e + 100 * np.sqrt(G_loss_S) + 100 * G_loss_V
         G_loss_grad = G_loss_U_grad + self.gamma * G_loss_U_e_grad + 100 * np.sqrt(G_loss_S_grad) + 100 * G_loss_V_grad
-
-        G_loss_grad=np.clip(G_loss_grad / (np.linalg.norm(G_loss_grad) + 1e-5), 1e-4, 1.0)
+        G_loss_grad = np.clip(G_loss_grad / (np.linalg.norm(G_loss_grad) + 1e-5), -1.0, 1.0)
 
         loss_grad = G_loss_grad
 
@@ -256,15 +260,19 @@ class TimeGAN():
         for recovery in self.recovery:
             output = recovery.forward_pass(output, training)
         X_tilde = output
+        
         # Embedder Network Loss
         E_loss_T0 = self.reconstruction_loss.loss(X, X_tilde)
         E_loss_T0_grad = self.reconstruction_loss.gradient(X, X_tilde)
+        E_loss_T0_grad=np.clip(E_loss_T0_grad / (np.linalg.norm(E_loss_T0_grad) + 1e-5), -1.0, 1.0)
+
         E_loss0 = 10 * np.sqrt(E_loss_T0)
         E_loss0_grad = 5 / (np.sqrt(E_loss_T0_grad) + 1e-6)
+        E_loss0_grad=np.clip(E_loss0_grad / (np.linalg.norm(E_loss0_grad) + 1e-5), -1.0, 1.0)
+
         E_loss = E_loss0  + 0.1 * G_loss_S
         E_loss_grad = E_loss0_grad + 0.1 * G_loss_S_grad
-
-        E_loss_grad=np.clip(E_loss_grad / (np.linalg.norm(E_loss_grad) + 1e-5), 1e-4, 1.0)
+        E_loss_grad=np.clip(E_loss_grad / (np.linalg.norm(E_loss_grad) + 1e-5), -1.0, 1.0)
 
         loss_grad_ = E_loss_grad
         
@@ -318,8 +326,8 @@ class TimeGAN():
 
 
     def fit(self, X, z_dim, ori_time, max_seq_len, n_epochs, batch_size):
-        wandb.init(project='timegan_generator',entity='varshantdhar')
-        wandb.config = {"epochs": n_epochs,"batch_size": batch_size,"learning_rate":1e-3}
+        wandb.init(project='TimeGAN',entity='varshantdhar')
+        wandb.config = {"epochs": n_epochs,"batch_size": batch_size,"learning_rate":1e-5}
         
         for _ in tqdm(range(n_epochs)):
             embedder_error = []
@@ -444,6 +452,7 @@ class NeuralNetwork():
         for _ in range(n_epochs):
             batch_error = []
             for X_batch, y_batch in batch_iterator(X,y, batch_size=batch_size):
+
                 loss, _ = self.train_on_batch(X_batch, y_batch)
                 batch_error.append(loss)
             

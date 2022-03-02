@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 
-from utils import random_generator, shuffle_data
+from utils import random_generator
 from deep_learning.optimizers import Adam
 from deep_learning.loss_functions import MeanSquaredError, CrossEntropy
 from deep_learning.layers import RNN, Activation, Dense, BiRNN
@@ -16,24 +16,37 @@ def main():
     optimizer = Adam()
 
     with open("data.pkl","rb") as f:
-        data = pickle.load(f)
+        ori_data = pickle.load(f)
     print("Data Loaded")
+
+    def MinMaxScaler(data):  
+        min_val = np.min(np.min(data, axis = 0), axis = 0)
+        data = data - min_val
+        
+        max_val = np.max(np.max(data, axis = 0), axis = 0)
+        norm_data = data / (max_val + 1e-7)
+        
+        return norm_data, min_val, max_val
+  
+    # Normalization
+    data, min_val, max_val = MinMaxScaler(ori_data)
 
     no, seq_len, dim = data.shape
     ori_time = [seq_len] * no
     max_seq_len = seq_len
-    X = shuffle_data(data.copy(), seed=42)
-    print("Data Shuffled")
+    # X = shuffle_data(data.copy(), seed=42)
+    # print("Data Shuffled")
+    X = data.copy()
     z_dim = 12
 
     # Build network
     # Embedding network
     rnn_units = 200
-    embedder = RNN(n_units=rnn_units, activation='tanh', bptt_trunc=12, input_shape=(max_seq_len, dim))
+    embedder = RNN(n_units=rnn_units, activation='tanh', bptt_trunc=seq_len, input_shape=(max_seq_len, dim))
     # Generator network
-    generator = RNN(n_units=rnn_units, activation='tanh', bptt_trunc=12, input_shape=(max_seq_len, z_dim))
+    generator = RNN(n_units=rnn_units, activation='tanh', bptt_trunc=seq_len, input_shape=(max_seq_len, z_dim))
     # Supervisor network
-    supervisor = RNN(n_units=rnn_units, activation='tanh', bptt_trunc=12, input_shape=(max_seq_len, rnn_units))
+    supervisor = RNN(n_units=rnn_units, activation='tanh', bptt_trunc=seq_len, input_shape=(max_seq_len, rnn_units))
     # Recovery network
     recovery = []
     # recovery.append()
@@ -43,7 +56,7 @@ def main():
     # Discrimator Network
     discriminator = []
     birnn_units = 300
-    discriminator.append(BiRNN(n_units=birnn_units, activation='tanh', bptt_trunc=12, input_shape=(max_seq_len, rnn_units)))
+    discriminator.append(BiRNN(n_units=birnn_units, activation='tanh', bptt_trunc=seq_len, input_shape=(max_seq_len, rnn_units)))
     discriminator.append(Dense(n_units=1, input_shape=(max_seq_len, birnn_units)))
     discriminator.append(Activation('sigmoid'))
 
@@ -66,6 +79,9 @@ def main():
     for i in tqdm(range(100)):
         Z = np.array(random_generator(no, z_dim, ori_time, max_seq_len))
         X_hat = model.generate(Z)
+        # Renormalization
+        X_hat *= max_val
+        X_hat += min_val
         with open("synthetic_data/synthetic_set_" + str(i) + ".pkl","wb") as f:
             pickle.dump(X_hat, f)
         sleep(1/100)
